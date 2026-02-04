@@ -43,4 +43,20 @@ pub mod veilpay {
             encrypted_tag,
         )
     }
+
+    pub fn deposit(
+        ctx: Context<Deposit>,
+        amount: u64,
+        encrypted_amount: [u8; 64],
+    ) -> Result<()> {
+        instructions::deposit::handler(ctx, amount, encrypted_amount)
+    }
+
+    pub fn withdraw(
+        ctx: Context<Withdraw>,
+        amount: u64,
+        encrypted_amount: [u8; 64],
+    ) -> Result<()> {
+        instructions::withdraw::handler(ctx, amount, encrypted_amount)
+    }
 }

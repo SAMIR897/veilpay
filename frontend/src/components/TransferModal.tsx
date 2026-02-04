@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useWallet } from '@solana/wallet-adapter-react';
+import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import * as anchor from '@coral-xyz/anchor';
 import { getProgram } from '../utils/anchor'; // Adjust import path
@@ -13,6 +13,7 @@ interface TransferModalProps {
 }
 
 export const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, balancePda, onSuccess }) => {
+    const { connection } = useConnection();
     const wallet = useWallet();
     const [recipient, setRecipient] = useState('');
     const [amount, setAmount] = useState('');
@@ -25,16 +26,30 @@ export const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, b
         setError(null);
 
         try {
-            const program = getProgram(new anchor.web3.Connection("http://127.0.0.1:8899"), wallet);
+            const program = getProgram(connection, wallet);
 
             // 1. Process inputs
+            // 1. Process inputs
             const recipientPubkey = new PublicKey(recipient);
-            const transferAmount = parseInt(amount);
+            const transferSolAmount = parseFloat(amount);
+            console.log("Transfer SOL:", transferSolAmount);
+            if (isNaN(transferSolAmount) || transferSolAmount <= 0) throw new Error("Invalid amount");
+
+            // Convert to Lamports (Integer) to avoid BigInt 0.18 error
+            const lamports = Math.round(transferSolAmount * anchor.web3.LAMPORTS_PER_SOL);
+            console.log("Transfer Lamports:", lamports);
 
             // 2. Encryption (Client-side privacy)
-            const encryptedAmount = encryptAmount(transferAmount);
-            // In a real app, this secret would be managed securely or derived
-            const senderSecret = Buffer.from("sender_secret_32_bytes_long_!!");
+            const encryptedAmount = encryptAmount(lamports);
+
+            // Derive secret from wallet signature (Polished Security)
+            if (!wallet.signMessage) throw new Error("Wallet does not support message signing!");
+            const message = new TextEncoder().encode("VeilPay Privacy: Sign to derive encryption key");
+            const authSignature = await wallet.signMessage(message);
+            const signatureHex = Buffer.from(authSignature).toString('hex');
+            const secretHash = anchor.utils.sha256.hash(signatureHex);
+            const senderSecret = Buffer.from(secretHash, 'hex');
+
             const encryptedTag = generateEncryptedTag(recipientPubkey, senderSecret);
 
             // Get current nonce (mock: fetch from account)
@@ -56,8 +71,49 @@ export const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, b
                 program.programId
             );
 
-            // 4. Send Transaction
-            await program.methods
+            // 4. Build Transaction
+            const tx = new anchor.web3.Transaction();
+
+            // Check if receiver account exists
+            // @ts-ignore
+            const receiverAccountInfo = await connection.getAccountInfo(receiverBalancePda);
+
+            if (!receiverAccountInfo) {
+                console.log("Initializing receiver account...");
+                const initIx = await program.methods
+                    .initBalance()
+                    .accounts({
+                        confidentialBalance: receiverBalancePda,
+                        owner: recipientPubkey,
+                        payer: wallet.publicKey,
+                    })
+                    .instruction();
+                tx.add(initIx);
+            }
+
+            // AUTO-DEPOSIT: Pay-as-you-go privacy
+            // We deposit the exact amount we want to transfer, ensuring the user always has funds.
+            // This treats the Privacy Layer as a "Passthrough" or "Mixer".
+            const depositLamports = new anchor.BN(lamports);
+            const encryptedDepositAmount = encryptAmount(lamports);
+
+            const [vaultPda] = PublicKey.findProgramAddressSync(
+                [Buffer.from("vault")],
+                program.programId
+            );
+
+            const depositIx = await program.methods
+                .deposit(depositLamports, encryptedDepositAmount)
+                .accounts({
+                    confidentialBalance: balancePda,
+                    vault: vaultPda,
+                    signer: wallet.publicKey,
+                    systemProgram: anchor.web3.SystemProgram.programId,
+                })
+                .instruction();
+            tx.add(depositIx);
+
+            const transferIx = await program.methods
                 .privateTransfer(
                     encryptedAmount,
                     new anchor.BN(currentNonce),
@@ -68,15 +124,25 @@ export const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, b
                     senderBalance: balancePda,
                     receiverBalance: receiverBalancePda,
                     sender: wallet.publicKey,
-                    // systemProgram is inferred usually, but good to check IDL
                 })
-                .rpc();
+                .instruction();
+
+            tx.add(transferIx);
+
+            // Send and confirm
+            // Re-adding the sendTransaction logic which was at the end of the block I'm replacing
+            const signature = await wallet.sendTransaction(tx, connection);
+            await connection.confirmTransaction(signature, "processed");
 
             onSuccess();
             onClose();
         } catch (err: any) {
-            console.error(err);
-            setError(err.message || "Transfer failed");
+            console.error("Full Transfer Error:", err);
+            // Check for common Anchor errors
+            if (err.logs) {
+                console.error("Tx Logs:", err.logs);
+            }
+            setError(err.message || "Unexpected error occurred");
         } finally {
             setLoading(false);
         }

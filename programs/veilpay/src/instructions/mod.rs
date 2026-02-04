@@ -5,3 +5,7 @@ pub mod private_transfer;
 pub use initialize_mint::*;
 pub use init_balance::*;
 pub use private_transfer::*;
+pub mod deposit;
+pub mod withdraw;
+pub use deposit::*;
+pub use withdraw::*;

@@ -7,14 +7,16 @@ use crate::utils::helpers::*;
 pub struct InitBalance<'info> {
     #[account(
         init,
-        payer = owner,
+        payer = payer,
         space = 8 + ConfidentialBalance::LEN,
         seeds = [BALANCE_SEED, owner.key().as_ref()],
         bump
     )]
     pub confidential_balance: Account<'info, ConfidentialBalance>,
+    /// CHECK: Safe because we only use the key for seeds/commitment
+    pub owner: UncheckedAccount<'info>,
     #[account(mut)]
-    pub owner: Signer<'info>,
+    pub payer: Signer<'info>,
     pub system_program: Program<'info, System>,
 }
 

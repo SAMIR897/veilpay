@@ -5,8 +5,9 @@ import { Buffer } from "buffer";
 // Helper function to create encrypted amount (matching Rust implementation)
 // In production, this would use Arcium SDK encryption
 export function encryptAmount(amount: number): number[] {
-    const amountBytes = Buffer.allocUnsafe(8);
-    amountBytes.writeBigUint64LE(BigInt(amount), 0);
+    const buffer = new ArrayBuffer(8);
+    new DataView(buffer).setBigUint64(0, BigInt(amount), true);
+    const amountBytes = Buffer.from(buffer);
 
     // Match the Rust encrypt_amount function logic
     const encrypted = new Array(64).fill(0);
@@ -33,8 +34,9 @@ export function generateCommitmentHash(
     nonce: number,
     recipientPubkey: PublicKey
 ): number[] {
-    const nonceBytes = Buffer.allocUnsafe(8);
-    nonceBytes.writeBigUint64LE(BigInt(nonce), 0);
+    const buffer = new ArrayBuffer(8);
+    new DataView(buffer).setBigUint64(0, BigInt(nonce), true);
+    const nonceBytes = Buffer.from(buffer);
 
     // Create deterministic hash for testing
     const combined = Buffer.concat([

@@ -7,10 +7,10 @@ export default defineConfig({
   plugins: [
     react(),
     nodePolyfills({
-      // To add only specific polyfills, add them here. If no option is passed, adds all polyfills
-      include: ['path', 'stream', 'util', 'buffer'],
-      // To exclude specific polyfills, add them to this list
-      exclude: ['http'], // Exclude if not needed
+      // Allow all polyfills to ensure maximum compatibility for Solana libraries
+      // include: ['path', 'stream', 'util', 'buffer'], 
+      // exclude: ['http'],
+
       // Whether to polyfill specific globals.
       globals: {
         Buffer: true,
@@ -23,7 +23,7 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      // Ensure specific aliases if needed, but the plugin usually handles this
+      buffer: 'buffer', // Explicitly alias to the installed buffer package
     }
   },
 })
