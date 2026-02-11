@@ -70,12 +70,11 @@ pub fn handler(
     );
     system_program::transfer(cpi_context, amount)?;
 
-    // 3. Update Encrypted Balance (Add negative amount = Subtract)
-    ctx.accounts.confidential_balance.encrypted_balance = 
-        cspl_add(
-            &ctx.accounts.confidential_balance.encrypted_balance,
-            &encrypted_amount,
-        )?;
+    // 3. Update Encrypted Balance (Subtract)
+    // Fix: Previously we were adding the encrypted amount, which caused the balance to increase on withdraw.
+    // For MVP, we decrypt, subtract, and re-encrypt.
+    let new_balance = decrypted_balance - amount;
+    ctx.accounts.confidential_balance.encrypted_balance = encrypt_amount(new_balance);
         
     Ok(())
 }
