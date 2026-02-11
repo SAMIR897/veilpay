@@ -21,5 +21,7 @@ export const getProgram = (connection: Connection, wallet: any) => {
         preflightCommitment: "processed",
     });
     setProvider(provider);
-    return new Program(idl as any, provider);
+    const program = new Program(idl as any, provider);
+    console.log("VeilPay Program Methods:", Object.keys(program.methods));
+    return program;
 };
