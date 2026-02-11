@@ -5,7 +5,7 @@ import * as web3 from '@solana/web3.js';
 import { BN } from '@coral-xyz/anchor';
 import { getProgram, PROGRAM_ID } from '../utils/anchor';
 import { TransferModal } from './TransferModal';
-import { encryptAmount } from '../utils/encryption';
+import { encryptAmount, decryptAmount } from '../utils/encryption';
 
 export const Dashboard: React.FC = () => {
     const { connection } = useConnection();
@@ -41,9 +41,16 @@ export const Dashboard: React.FC = () => {
         }
     };
 
-    const handleWithdraw = async () => {
+    const handleWithdraw = async (maxAmount?: number) => {
         if (!wallet.publicKey || !balancePda) return;
-        const amountStr = prompt("Enter amount to WITHDRAW (SOL):");
+
+        let amountStr;
+        if (maxAmount !== undefined) {
+            amountStr = maxAmount.toString();
+        } else {
+            amountStr = prompt("Enter amount to WITHDRAW (SOL):");
+        }
+
         if (!amountStr) return;
         const amount = parseFloat(amountStr);
         if (isNaN(amount) || amount <= 0) return alert("Invalid amount");
@@ -156,35 +163,53 @@ export const Dashboard: React.FC = () => {
 
                 {!loading && balanceAccount && (
                     <div className="grid gap-6">
-                        <div className="inner-card flex flex-col items-center justify-center p-6 hover:scale-[1.02] transition-transform duration-300">
-                            <label className="text-xs font-bold uppercase tracking-widest text-rose-900 mb-3 text-center">Encrypted Balance</label>
-                            <div className="font-mono text-[10px] leading-relaxed bg-white/80 p-4 rounded-lg border border-rose-100 shadow-inner break-all text-center w-full text-rose-600">
-                                {Buffer.from(balanceAccount.encryptedBalance).toString('hex')}
+                        {/* DECRYPTED BALANCE DISPLAY */}
+                        <div className="bg-white/90 backdrop-blur rounded-2xl p-6 shadow-xl border border-rose-100 flex flex-col items-center">
+                            <label className="text-xs font-bold uppercase tracking-widest text-rose-800/60 mb-2">Available Balance</label>
+                            <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-rose-600 to-purple-600">
+                                {(decryptAmount(balanceAccount.encryptedBalance) / web3.LAMPORTS_PER_SOL).toFixed(4)}
+                                <span className="text-lg ml-2 text-rose-400 font-bold">SOL</span>
                             </div>
                         </div>
 
-                        <div className="flex flex-col gap-4">
-                            <div className="inner-card flex flex-col items-center justify-center p-4 hover:scale-[1.02] transition-transform duration-300">
-                                <label className="text-xs font-bold uppercase tracking-widest text-rose-900 mb-2 text-center">Owner Hash</label>
-                                <div className="font-mono text-[10px] bg-white/80 px-4 py-2 rounded-lg border border-rose-100 text-rose-800 break-all text-center w-full">
-                                    {Buffer.from(balanceAccount.ownerCommitment).toString('hex')}
+                        <div className="grid gap-6">
+                            {/* Hide Raw Encrypted in smaller detail */}
+                            <details className="text-center group">
+                                <summary className="cursor-pointer text-xs font-bold uppercase tracking-widest text-rose-400 hover:text-rose-600 transition-colors list-none">
+                                    Show Technical Details ▾
+                                </summary>
+                                <div className="mt-4 grid gap-4 animate-fadeIn">
+                                    <div className="inner-card flex flex-col items-center justify-center p-4">
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-rose-900 mb-2">Encrypted State</label>
+                                        <div className="font-mono text-[10px] bg-white/50 px-2 py-1 rounded text-rose-800 break-all w-full text-center">
+                                            {Buffer.from(balanceAccount.encryptedBalance).toString('hex').slice(0, 32)}...
+                                        </div>
+                                    </div>
+                                    <div className="inner-card flex flex-col items-center justify-center p-4">
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-rose-900 mb-2">Nonce</label>
+                                        <div className="text-xl font-bold text-rose-700">
+                                            {balanceAccount.nonce.toString()}
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="inner-card flex flex-col items-center justify-center p-4 hover:scale-[1.02] transition-transform duration-300">
-                                <label className="text-xs font-bold uppercase tracking-widest text-rose-900 mb-2 text-center">Nonce</label>
-                                <div className="text-3xl font-extrabold text-rose-700 text-center w-full">
-                                    {balanceAccount.nonce.toString()}
-                                </div>
-                            </div>
+                            </details>
                         </div>
 
-                        <div className="flex justify-center mt-6 gap-4">
+                        <div className="flex flex-col gap-3 mt-4">
                             <button className="btn-primary w-full text-lg shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all" onClick={() => setIsTransferModalOpen(true)}>
                                 Send Private
                             </button>
-                            <button className="btn-secondary w-full text-lg shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all" onClick={handleWithdraw}>
-                                Withdraw SOL
-                            </button>
+                            <div className="flex gap-2">
+                                <button className="btn-secondary flex-1 text-lg shadow-md hover:shadow-lg transition-all" onClick={() => {
+                                    const maxBalance = decryptAmount(balanceAccount.encryptedBalance) / web3.LAMPORTS_PER_SOL;
+                                    handleWithdraw(maxBalance);
+                                }}>
+                                    Withdraw MAX
+                                </button>
+                                <button className="btn-secondary flex-1 text-lg shadow-md hover:shadow-lg transition-all" onClick={() => handleWithdraw()}>
+                                    Withdraw
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}

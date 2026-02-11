@@ -3,6 +3,7 @@ use crate::state::*;
 use crate::constants::*;
 use crate::utils::{helpers::*, crypto::*};
 use anchor_lang::system_program;
+use crate::errors::VeilPayError;
 
 #[derive(Accounts)]
 pub struct Withdraw<'info> {
@@ -38,6 +39,16 @@ pub fn handler(
     let rent = Rent::get()?.minimum_balance(0);
     let vault_balance = ctx.accounts.vault.lamports();
     
+    // SECURITY: Enforce balance check
+    // Extract decrypted balance from on-chain state
+    let decrypted_balance = cspl_decrypt(&ctx.accounts.confidential_balance.encrypted_balance);
+    
+    // Check if user has enough funds in their private balance
+    require!(
+        decrypted_balance >= amount,
+        VeilPayError::InsufficientBalance
+    );
+
     if vault_balance.saturating_sub(amount) < rent {
         return Err(ProgramError::InsufficientFunds.into());
     }

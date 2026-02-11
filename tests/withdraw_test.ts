@@ -88,4 +88,29 @@ describe("VeilPay - Withdrawal Test", () => {
         assert.equal(vaultBalanceAfter, vaultBalanceBefore - withdrawAmount, "Vault balance check");
         assert.isAbove(senderBalanceAfter, senderBalanceBefore, "Sender balance check");
     });
+
+    it("Fails to withdraw more than balance", async () => {
+        const hugeAmount = 100 * LAMPORTS_PER_SOL; // More than deposited
+        const encryptedAmount = encryptAmount(hugeAmount);
+
+        try {
+            await program.methods
+                .withdraw(
+                    new anchor.BN(hugeAmount),
+                    encryptedAmount
+                )
+                .accounts({
+                    confidentialBalance: senderBalancePda,
+                    vault: vaultPda,
+                    signer: sender.publicKey,
+                    systemProgram: SystemProgram.programId,
+                })
+                .signers([sender])
+                .rpc();
+
+            assert.fail("Should have failed due to insufficient funds");
+        } catch (err: any) {
+            assert.ok(err.toString().includes("InsufficientFunds") || err.toString().includes("0x1770"), "Error should be InsufficientFunds");
+        }
+    });
 });

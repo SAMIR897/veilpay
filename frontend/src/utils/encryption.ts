@@ -4,6 +4,15 @@ import { Buffer } from "buffer";
 
 // Helper function to create encrypted amount (matching Rust implementation)
 // In production, this would use Arcium SDK encryption
+// Helper to decrypt amount (for UI display in MVP)
+export function decryptAmount(encrypted: number[]): number {
+    const buffer = Buffer.from(encrypted.slice(0, 8));
+    const view = new DataView(buffer.buffer);
+    // Read BigUInt64 (little endian)
+    const amountBigInt = view.getBigUint64(0, true);
+    return Number(amountBigInt);
+}
+
 // Helper function to create encrypted amount (Simple Arithmetic Mock)
 // In production, this would use Arcium SDK encryption
 export function encryptAmount(amount: number): number[] {

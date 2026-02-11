@@ -46,6 +46,12 @@ pub fn cspl_add(
     Ok(encrypt_amount(result_val))
 }
 
+pub fn cspl_decrypt(
+    balance: &[u8; ENCRYPTED_VALUE_SIZE],
+) -> u64 {
+    extract_encrypted_value(balance)
+}
+
 pub fn encrypt_amount(amount: u64) -> [u8; ENCRYPTED_VALUE_SIZE] {
     let mut encrypted = [0u8; ENCRYPTED_VALUE_SIZE];
     let amount_bytes = amount.to_le_bytes();
