@@ -59,4 +59,25 @@ pub mod veilpay {
     ) -> Result<()> {
         instructions::withdraw::handler(ctx, amount, encrypted_amount)
     }
+
+    pub fn create_transfer(
+        ctx: Context<CreateTransfer>,
+        amount: u64,
+        encrypted_amount: [u8; 64],
+        recipient: Pubkey,
+    ) -> Result<()> {
+        instructions::create_transfer::handler(ctx, amount, encrypted_amount, recipient)
+    }
+
+    pub fn claim_transfer(
+        ctx: Context<ClaimTransfer>,
+    ) -> Result<()> {
+        instructions::claim_transfer::handler(ctx)
+    }
+
+    pub fn cancel_transfer(
+        ctx: Context<CancelTransfer>,
+    ) -> Result<()> {
+        instructions::cancel_transfer::handler(ctx)
+    }
 }
