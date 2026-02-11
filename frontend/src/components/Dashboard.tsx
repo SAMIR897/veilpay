@@ -5,6 +5,7 @@ import * as web3 from '@solana/web3.js';
 import { BN } from '@coral-xyz/anchor';
 import { getProgram, PROGRAM_ID } from '../utils/anchor';
 import { TransferModal } from './TransferModal';
+import { PendingTransfers } from './PendingTransfers';
 import { encryptAmount, decryptAmount } from '../utils/encryption';
 
 export const Dashboard: React.FC = () => {
@@ -217,12 +218,15 @@ export const Dashboard: React.FC = () => {
 
             {
                 balancePda && (
-                    <TransferModal
-                        isOpen={isTransferModalOpen}
-                        onClose={() => setIsTransferModalOpen(false)}
-                        balancePda={balancePda}
-                        onSuccess={() => fetchBalance(balancePda)}
-                    />
+                    <>
+                        <TransferModal
+                            isOpen={isTransferModalOpen}
+                            onClose={() => setIsTransferModalOpen(false)}
+                            balancePda={balancePda}
+                            onSuccess={() => fetchBalance(balancePda)}
+                        />
+                        <PendingTransfers />
+                    </>
                 )
             }
         </div>

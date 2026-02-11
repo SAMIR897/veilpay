@@ -3,7 +3,7 @@ import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import * as anchor from '@coral-xyz/anchor';
 import { getProgram } from '../utils/anchor'; // Adjust import path
-import { encryptAmount, generateCommitmentHash, generateEncryptedTag } from '../utils/encryption';
+import { encryptAmount } from '../utils/encryption';
 
 interface TransferModalProps {
     isOpen: boolean;
@@ -43,14 +43,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, b
             const encryptedAmount = encryptAmount(lamports);
 
             // Derive secret from wallet signature (Polished Security)
-            if (!wallet.signMessage) throw new Error("Wallet does not support message signing!");
-            const message = new TextEncoder().encode("VeilPay Privacy: Sign to derive encryption key");
-            const authSignature = await wallet.signMessage(message);
-            const signatureHex = Buffer.from(authSignature).toString('hex');
-            const secretHash = anchor.utils.sha256.hash(signatureHex);
-            const senderSecret = Buffer.from(secretHash, 'hex');
 
-            const encryptedTag = generateEncryptedTag(recipientPubkey, senderSecret);
 
             // 2b. Get current nonce & Check Sender Account
             let currentNonce = 0;
@@ -68,15 +61,24 @@ export const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, b
                 currentNonce = 0;
             }
 
-            const commitmentHash = generateCommitmentHash(
-                encryptedAmount,
-                currentNonce,
-                recipientPubkey
-            );
 
-            // 3. Find recipient balance account
-            const [receiverBalancePda] = PublicKey.findProgramAddressSync(
-                [Buffer.from("balance"), recipientPubkey.toBuffer()],
+
+            // 3. Derive Pending Transfer PDA
+            // We need the nonce to derive the unique PDA for this transfer
+            // We already fetched currentNonce above.
+            // PENDING_TRANSFER_SEED = "pending_transfer"
+            // Seeds: ["pending_transfer", sender, recipient, nonce_le_bytes]
+
+            // Convert nonce to Little Endian Buffer (8 bytes)
+            const nonceBuffer = new anchor.BN(currentNonce).toArrayLike(Buffer, 'le', 8);
+
+            const [pendingTransferPda] = PublicKey.findProgramAddressSync(
+                [
+                    Buffer.from("pending_transfer"),
+                    wallet.publicKey.toBuffer(),
+                    recipientPubkey.toBuffer(),
+                    nonceBuffer
+                ],
                 program.programId
             );
 
@@ -96,26 +98,8 @@ export const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, b
                 tx.add(initSenderIx);
             }
 
-            // Check if receiver account exists
-            // @ts-ignore
-            const receiverAccountInfo = await connection.getAccountInfo(receiverBalancePda);
-
-            if (!receiverAccountInfo) {
-                console.log("Initializing receiver account...");
-                const initIx = await program.methods
-                    .initBalance()
-                    .accounts({
-                        confidentialBalance: receiverBalancePda,
-                        owner: recipientPubkey,
-                        payer: wallet.publicKey,
-                    })
-                    .instruction();
-                tx.add(initIx);
-            }
-
             // AUTO-DEPOSIT: Pay-as-you-go privacy
             // We deposit the exact amount we want to transfer, ensuring the user always has funds.
-            // This treats the Privacy Layer as a "Passthrough" or "Mixer".
             const depositLamports = new anchor.BN(lamports);
             const encryptedDepositAmount = encryptAmount(lamports);
 
@@ -135,21 +119,23 @@ export const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, b
                 .instruction();
             tx.add(depositIx);
 
-            const transferIx = await program.methods
-                .privateTransfer(
+            // CREATE TRANSFER (Escrow)
+            // Note: We don't need to init receiver account! They can do it when they claim.
+            const createTransferIx = await program.methods
+                .createTransfer(
+                    new anchor.BN(lamports),
                     encryptedAmount,
-                    new anchor.BN(currentNonce),
-                    commitmentHash,
-                    encryptedTag
+                    recipientPubkey
                 )
                 .accounts({
                     senderBalance: balancePda,
-                    receiverBalance: receiverBalancePda,
+                    pendingTransfer: pendingTransferPda,
                     sender: wallet.publicKey,
+                    systemProgram: anchor.web3.SystemProgram.programId,
                 })
                 .instruction();
 
-            tx.add(transferIx);
+            tx.add(createTransferIx);
 
             // Send and confirm
             // Re-adding the sendTransaction logic which was at the end of the block I'm replacing
