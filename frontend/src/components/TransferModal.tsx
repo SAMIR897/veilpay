@@ -209,7 +209,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, b
                                 className="w-full bg-transparent text-2xl font-bold text-rose-900 placeholder-rose-200 focus:outline-none"
                                 placeholder="0.00"
                                 min="0"
-                                step="0.01"
+                                step="any"
                                 value={amount}
                                 onChange={(e) => setAmount(e.target.value)}
                             />

@@ -6,25 +6,13 @@ pub fn cspl_assert_ge(
     balance: &[u8; ENCRYPTED_VALUE_SIZE],
     amount: &[u8; ENCRYPTED_VALUE_SIZE],
 ) -> Result<()> {
-    let balance_c1 = &balance[0..ELGAMAL_C1_SIZE];
-    let balance_c2 = &balance[ELGAMAL_C1_SIZE..ENCRYPTED_VALUE_SIZE];
-    let amount_c1 = &amount[0..ELGAMAL_C1_SIZE];
-    let amount_c2 = &amount[ELGAMAL_C1_SIZE..ENCRYPTED_VALUE_SIZE];
-
-    let balance_commitment = hashv(&[balance_c1, balance_c2]);
-    let _amount_commitment = hashv(&[amount_c1, amount_c2]);
-
-    let balance_value = extract_encrypted_value(balance);
-    let amount_value = extract_encrypted_value(amount);
+    // MOCK: Extract u64 directly from first 8 bytes
+    let balance_val = extract_encrypted_value(balance);
+    let amount_val = extract_encrypted_value(amount);
 
     require!(
-        balance_value >= amount_value,
+        balance_val >= amount_val,
         ErrorCode::InsufficientBalance
-    );
-
-    require!(
-        balance_commitment.as_ref() != [0u8; 32],
-        ErrorCode::InvalidEncryption
     );
 
     Ok(())
@@ -34,80 +22,51 @@ pub fn cspl_sub(
     balance: &[u8; ENCRYPTED_VALUE_SIZE],
     amount: &[u8; ENCRYPTED_VALUE_SIZE],
 ) -> Result<[u8; ENCRYPTED_VALUE_SIZE]> {
-    let mut result = [0u8; ENCRYPTED_VALUE_SIZE];
+    let balance_val = extract_encrypted_value(balance);
+    let amount_val = extract_encrypted_value(amount);
 
-    let balance_c1 = &balance[0..ELGAMAL_C1_SIZE];
-    let balance_c2 = &balance[ELGAMAL_C1_SIZE..ENCRYPTED_VALUE_SIZE];
-    let amount_c1 = &amount[0..ELGAMAL_C1_SIZE];
-    let amount_c2 = &amount[ELGAMAL_C1_SIZE..ENCRYPTED_VALUE_SIZE];
+    // Perform subtraction
+    let result_val = balance_val.checked_sub(amount_val).ok_or(ErrorCode::InsufficientBalance)?;
 
-    for i in 0..ELGAMAL_C1_SIZE {
-        result[i] = balance_c1[i].wrapping_sub(amount_c1[i]);
-    }
-
-    for i in 0..ELGAMAL_C2_SIZE {
-        result[ELGAMAL_C1_SIZE + i] = balance_c2[i].wrapping_sub(amount_c2[i]);
-    }
-
-    let result_commitment = hashv(&[&result[0..ELGAMAL_C1_SIZE], &result[ELGAMAL_C1_SIZE..ENCRYPTED_VALUE_SIZE]]);
-    require!(
-        result_commitment.as_ref() != [0u8; 32],
-        ErrorCode::InvalidEncryption
-    );
-
-    Ok(result)
+    // Re-encrypt (pack)
+    Ok(encrypt_amount(result_val))
 }
 
 pub fn cspl_add(
     balance: &[u8; ENCRYPTED_VALUE_SIZE],
     amount: &[u8; ENCRYPTED_VALUE_SIZE],
 ) -> Result<[u8; ENCRYPTED_VALUE_SIZE]> {
-    let mut result = [0u8; ENCRYPTED_VALUE_SIZE];
+    let balance_val = extract_encrypted_value(balance);
+    let amount_val = extract_encrypted_value(amount);
 
-    let balance_c1 = &balance[0..ELGAMAL_C1_SIZE];
-    let balance_c2 = &balance[ELGAMAL_C1_SIZE..ENCRYPTED_VALUE_SIZE];
-    let amount_c1 = &amount[0..ELGAMAL_C1_SIZE];
-    let amount_c2 = &amount[ELGAMAL_C1_SIZE..ENCRYPTED_VALUE_SIZE];
+    // Perform addition
+    let result_val = balance_val.checked_add(amount_val).unwrap_or(u64::MAX);
 
-    for i in 0..ELGAMAL_C1_SIZE {
-        result[i] = balance_c1[i].wrapping_add(amount_c1[i]);
-    }
-
-    for i in 0..ELGAMAL_C2_SIZE {
-        result[ELGAMAL_C1_SIZE + i] = balance_c2[i].wrapping_add(amount_c2[i]);
-    }
-
-    let result_commitment = hashv(&[&result[0..ELGAMAL_C1_SIZE], &result[ELGAMAL_C1_SIZE..ENCRYPTED_VALUE_SIZE]]);
-    require!(
-        result_commitment.as_ref() != [0u8; 32],
-        ErrorCode::InvalidEncryption
-    );
-
-    Ok(result)
+    // Re-encrypt (pack)
+    Ok(encrypt_amount(result_val))
 }
 
 pub fn encrypt_amount(amount: u64) -> [u8; ENCRYPTED_VALUE_SIZE] {
     let mut encrypted = [0u8; ENCRYPTED_VALUE_SIZE];
     let amount_bytes = amount.to_le_bytes();
 
-    let c1_seed = hashv(&[&amount_bytes, b"c1"]);
-    let c2_seed = hashv(&[&amount_bytes, b"c2"]);
+    // Store amount in first 8 bytes
+    encrypted[0..8].copy_from_slice(&amount_bytes);
 
-    encrypted[0..ELGAMAL_C1_SIZE].copy_from_slice(&c1_seed.to_bytes()[0..ELGAMAL_C1_SIZE]);
-    encrypted[ELGAMAL_C1_SIZE..ENCRYPTED_VALUE_SIZE].copy_from_slice(&c2_seed.to_bytes()[0..ELGAMAL_C2_SIZE]);
+    // Fill the rest with noise (hash of amount to look random)
+    let noise_seed = hashv(&[&amount_bytes, b"noise"]);
+    encrypted[8..40].copy_from_slice(&noise_seed.to_bytes());
+    
+    // Fill remaining bytes if needed (size depends on constants, assuming 64)
+    // ELGAMAL_C1_SIZE + ELGAMAL_C2_SIZE usually 64
+    // We just fill 8..40 for now, rest remains 0 or can be filled more if strictly needed.
 
     encrypted
 }
 
 fn extract_encrypted_value(encrypted: &[u8; ENCRYPTED_VALUE_SIZE]) -> u64 {
-    let c1 = &encrypted[0..ELGAMAL_C1_SIZE];
-    let c2 = &encrypted[ELGAMAL_C1_SIZE..ENCRYPTED_VALUE_SIZE];
-    
-    let combined = [c1, c2].concat();
-    let hash = hashv(&[&combined]);
-    
     let mut value_bytes = [0u8; 8];
-    value_bytes.copy_from_slice(&hash.to_bytes()[0..8]);
+    value_bytes.copy_from_slice(&encrypted[0..8]);
     u64::from_le_bytes(value_bytes)
 }
 

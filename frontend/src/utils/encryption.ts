@@ -4,26 +4,31 @@ import { Buffer } from "buffer";
 
 // Helper function to create encrypted amount (matching Rust implementation)
 // In production, this would use Arcium SDK encryption
+// Helper function to create encrypted amount (Simple Arithmetic Mock)
+// In production, this would use Arcium SDK encryption
 export function encryptAmount(amount: number): number[] {
+    const encrypted = new Array(64).fill(0);
+
+    // Store the amount directly in the first 8 bytes (Little Endian)
+    // This allows the Rust program to perform "homomorphic" operations by just adding/subtracting these bytes
     const buffer = new ArrayBuffer(8);
     new DataView(buffer).setBigUint64(0, BigInt(amount), true);
     const amountBytes = Buffer.from(buffer);
 
-    // Match the Rust encrypt_amount function logic
-    const encrypted = new Array(64).fill(0);
+    // Copy amount to first 8 bytes
+    for (let i = 0; i < 8; i++) {
+        encrypted[i] = amountBytes[i];
+    }
 
-    // Generate c1 (first 32 bytes) using keccak hash of amount + "c1"
-    const c1Input = Buffer.concat([amountBytes, Buffer.from("c1")]);
-    const c1Hash = utils.sha256.hash(c1Input.toString('hex'));
-    // sha256.hash returns a string hex, we need bytes
-    const c1HashBytes = Buffer.from(c1Hash, 'hex');
-    encrypted.splice(0, 32, ...Array.from(c1HashBytes));
+    // Fill the rest with deterministic noise (hash of amount) to look like ciphertext
+    const noiseInput = Buffer.concat([amountBytes, Buffer.from("noise")]);
+    const noiseHash = utils.sha256.hash(noiseInput.toString('hex'));
+    const noiseBytes = Buffer.from(noiseHash, 'hex');
 
-    // Generate c2 (last 32 bytes) using keccak hash of amount + "c2"
-    const c2Input = Buffer.concat([amountBytes, Buffer.from("c2")]);
-    const c2Hash = utils.sha256.hash(c2Input.toString('hex'));
-    const c2HashBytes = Buffer.from(c2Hash, 'hex');
-    encrypted.splice(32, 32, ...Array.from(c2HashBytes));
+    // Fill bytes 8..40 with noise
+    for (let i = 0; i < 32; i++) {
+        encrypted[8 + i] = noiseBytes[i];
+    }
 
     return encrypted;
 }
