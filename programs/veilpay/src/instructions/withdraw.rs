@@ -42,8 +42,22 @@ pub fn handler(
         return Err(ProgramError::InsufficientFunds.into());
     }
 
-    **ctx.accounts.vault.try_borrow_mut_lamports()? -= amount;
-    **ctx.accounts.signer.try_borrow_mut_lamports()? += amount;
+    let bump = ctx.bumps.vault;
+    let seeds = &[
+        VAULT_SEED,
+        &[bump],
+    ];
+    let signer_seeds = &[&seeds[..]];
+
+    let cpi_context = CpiContext::new_with_signer(
+        ctx.accounts.system_program.to_account_info(),
+        system_program::Transfer {
+            from: ctx.accounts.vault.to_account_info(),
+            to: ctx.accounts.signer.to_account_info(),
+        },
+        signer_seeds,
+    );
+    system_program::transfer(cpi_context, amount)?;
 
     // 3. Update Encrypted Balance (Add negative amount = Subtract)
     ctx.accounts.confidential_balance.encrypted_balance = 
