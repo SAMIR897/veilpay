@@ -10,6 +10,8 @@ const MatrixRain: React.FC = () => {
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
+        console.log("MatrixRain Skynet V2 Active - DropSize: 15, Speed: 75ms");
+
         // Set canvas size
         const resizeCanvas = () => {
             canvas.width = window.innerWidth;
