@@ -137,6 +137,31 @@ export const Dashboard: React.FC = () => {
         }
     };
 
+    const resetAccount = async () => {
+        if (!wallet.publicKey || !balancePda) return;
+        if (!confirm("⚠️ This will reset your encrypted balance to 0. Use this ONLY if your balance display is corrupted or showing incorrect values. Proceed?")) return;
+
+        try {
+            setLoading(true);
+            const program = getProgram(connection, wallet);
+            await program.methods
+                .resetAccount()
+                .accounts({
+                    confidentialBalance: balancePda,
+                    signer: wallet.publicKey,
+                })
+                .rpc();
+
+            alert("Account Reset Successfully!");
+            fetchBalance(balancePda);
+        } catch (err: any) {
+            console.error("Reset Error:", err);
+            alert("Reset Failed: " + err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     if (!wallet.connected) {
         return (
             <div className="glass-panel p-8 text-center">
@@ -191,6 +216,14 @@ export const Dashboard: React.FC = () => {
                                         <div className="text-xl font-bold text-rose-700">
                                             {balanceAccount.nonce.toString()}
                                         </div>
+                                    </div>
+                                    <div className="pt-2">
+                                        <button
+                                            className="text-xs text-rose-500 hover:text-rose-700 underline"
+                                            onClick={resetAccount}
+                                        >
+                                            [Debug] Reset / Fix Account State
+                                        </button>
                                     </div>
                                 </div>
                             </details>

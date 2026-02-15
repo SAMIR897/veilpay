@@ -530,6 +530,51 @@
       ]
     },
     {
+      "name": "reset_account",
+      "discriminator": [
+        17,
+        72,
+        171,
+        223,
+        38,
+        215,
+        14,
+        110
+      ],
+      "accounts": [
+        {
+          "name": "confidential_balance",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  97,
+                  108,
+                  97,
+                  110,
+                  99,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "signer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "withdraw",
       "discriminator": [
         183,

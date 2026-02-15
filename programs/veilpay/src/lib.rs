@@ -80,4 +80,10 @@ pub mod veilpay {
     ) -> Result<()> {
         instructions::cancel_transfer::handler(ctx)
     }
+
+    pub fn reset_account(
+        ctx: Context<ResetAccount>,
+    ) -> Result<()> {
+        instructions::reset_account::handler(ctx)
+    }
 }
