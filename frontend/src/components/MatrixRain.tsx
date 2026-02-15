@@ -20,15 +20,15 @@ const MatrixRain: React.FC = () => {
 
         // Matrix characters (Katakana + Latin)
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*()ｦｧｨｩｪｫｬｭｮｯｰｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ';
-        const dropSize = 24;
+        const dropSize = 15; // 40% reduction from 24px
         const columns = Math.ceil(canvas.width / dropSize);
         const drops: number[] = new Array(columns).fill(0).map(() => Math.random() * -100); // Stagger start
 
         const draw = () => {
             // "Destination-Out" Blending:
-            // Very slow fade (0.03) for Extremely Long Trails
+            // Slower fade for maintained trail length
             ctx.globalCompositeOperation = 'destination-out';
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.03)';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             // Switch back to normal drawing for the new characters
@@ -38,34 +38,60 @@ const MatrixRain: React.FC = () => {
             for (let i = 0; i < drops.length; i++) {
                 // Get characters
                 const text = chars[Math.floor(Math.random() * chars.length)];
-                const prevText = chars[Math.floor(Math.random() * chars.length)];
 
                 const y = drops[i];
 
-                // 1. Repair the Trail (The spot ABOVE the head)
-                if (y > 0) {
-                    ctx.fillStyle = '#990000'; // Blood Red (Darker)
-                    ctx.shadowBlur = 5;
-                    ctx.shadowColor = '#4a0000'; // Dark Glow
-                    ctx.fillText(prevText, i * dropSize, (y - 1) * dropSize);
-                }
+                // TRAIL LOGIC: 5-step gradient from Tail (Dim) to Head (Bright)
+                // We draw the trail characters explicitly to control the specific "increasing glow" effect requested.
 
-                // 2. Draw the Head (Leading Edge)
-                // Removed White entirely. Used Bright Neon Red for Skynet look.
+                // 1. The Head (Brightest)
                 ctx.fillStyle = '#ff1a1a'; // Neon Red
                 ctx.shadowBlur = 15;
-                ctx.shadowColor = '#ff0000'; // Bright Red Glow
+                ctx.shadowColor = '#ff0000'; // Max Glow
                 ctx.fillText(text, i * dropSize, y * dropSize);
 
+                // 2. The Trail (Previous 4 positions)
+                for (let k = 1; k <= 4; k++) {
+                    const trailY = y - k;
+                    if (trailY > 0) {
+                        const trailChar = chars[Math.floor(Math.random() * chars.length)];
+
+                        // Gradient Logic:
+                        // k=1 (Immediate behind head): Bright
+                        // k=4 (Furthest behind): Dim
+
+                        if (k === 1) {
+                            ctx.fillStyle = '#cc0000';
+                            ctx.shadowBlur = 10;
+                            ctx.shadowColor = '#cc0000';
+                        } else if (k === 2) {
+                            ctx.fillStyle = '#990000';
+                            ctx.shadowBlur = 6;
+                            ctx.shadowColor = '#800000';
+                        } else if (k === 3) {
+                            ctx.fillStyle = '#660000';
+                            ctx.shadowBlur = 3;
+                            ctx.shadowColor = '#400000';
+                        } else {
+                            // k=4 (Tail Tip)
+                            ctx.fillStyle = '#330000';
+                            ctx.shadowBlur = 0; // No glow
+                            ctx.shadowColor = 'transparent';
+                        }
+
+                        ctx.fillText(trailChar, i * dropSize, trailY * dropSize);
+                    }
+                }
+
                 // Reset drop or move it down
-                if (y * dropSize > canvas.height && Math.random() > 0.985) { // 0.985 = fewer drops respawning at once
+                if (y * dropSize > canvas.height && Math.random() > 0.985) {
                     drops[i] = 0;
                 }
                 drops[i]++;
             }
         };
 
-        // Aggressively Slow Speed (75ms = ~13fps)
+        // Speed: 75ms (Keep the slow mechanical feel)
         const interval = setInterval(draw, 75);
 
         return () => {
