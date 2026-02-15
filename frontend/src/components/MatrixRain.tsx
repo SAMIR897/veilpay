@@ -41,8 +41,12 @@ const MatrixRain: React.FC = () => {
                 const isHead = Math.random() > 0.95;
                 if (isHead) {
                     ctx.fillStyle = '#fff'; // White tip for sparkle
+                    ctx.shadowBlur = 8;
+                    ctx.shadowColor = '#fff';
                 } else {
                     ctx.fillStyle = '#be123c'; // Rose-700 Red
+                    ctx.shadowBlur = 5;
+                    ctx.shadowColor = '#f43f5e'; // Rose-500 Glow
                 }
 
                 ctx.fillText(text, i * dropSize, drops[i] * dropSize);
