@@ -198,6 +198,16 @@ export const Dashboard: React.FC = () => {
                             </div>
                         </div>
 
+                        <div className="flex justify-center -mt-4 mb-4">
+                            <button
+                                className="text-xs font-bold text-rose-500 bg-rose-50 px-3 py-1 rounded-full border border-rose-200 hover:bg-rose-100 transition-colors flex items-center gap-1"
+                                onClick={resetAccount}
+                            >
+                                <span>⚠️ Balance incorrect?</span>
+                                <span className="underline">Reset Account</span>
+                            </button>
+                        </div>
+
                         <div className="grid gap-6">
                             {/* Hide Raw Encrypted in smaller detail */}
                             <details className="text-center group">
