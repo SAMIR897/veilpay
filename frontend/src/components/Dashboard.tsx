@@ -16,6 +16,8 @@ export const Dashboard: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
 
+    const [isReceiveOpen, setIsReceiveOpen] = useState(false);
+
     useEffect(() => {
         if (wallet.publicKey) {
             const [pda] = PublicKey.findProgramAddressSync(
@@ -72,11 +74,14 @@ export const Dashboard: React.FC = () => {
         return effective / web3.LAMPORTS_PER_SOL;
     };
 
+    // Dev Tools (Hidden for now)
+    /*
     const isSyncError = () => {
         if (!balanceAccount || vaultBalance === null) return false;
         const decrypted = decryptAmount(balanceAccount.encryptedBalance);
         return decrypted > (vaultBalance + 10000); // Small buffer for dust
     };
+    */
 
     const handleWithdraw = async (maxAmount?: number) => {
         if (!wallet.publicKey || !balancePda) return;
@@ -173,6 +178,7 @@ export const Dashboard: React.FC = () => {
         }
     };
 
+    /*
     const resetAccount = async () => {
         if (!wallet.publicKey || !balancePda) return;
         if (!confirm("⚠️ This will reset your encrypted balance to 0. Use this ONLY if your balance display is corrupted or showing incorrect values. Proceed?")) return;
@@ -197,6 +203,7 @@ export const Dashboard: React.FC = () => {
             setLoading(false);
         }
     };
+    */
 
     if (!wallet.connected) {
         return (
@@ -208,8 +215,8 @@ export const Dashboard: React.FC = () => {
     }
 
     return (
-        <div className="space-y-8 text-center w-full">
-            <div className="glass-panel p-8 md:p-10 shadow-2xl">
+        <div className="space-y-8 text-center w-full relative">
+            <div className="glass-panel p-8 md:p-10 shadow-2xl relative z-10">
                 <h2 className="text-3xl font-bold mb-8 text-rose-900 tracking-tight">Your Private Balance</h2>
 
                 {loading && <p className="font-medium text-lg animate-pulse text-rose-500">Processing secure transaction...</p>}
@@ -225,8 +232,8 @@ export const Dashboard: React.FC = () => {
 
                 {!loading && balanceAccount && (
                     <div className="grid gap-6">
-                        {/* DECRYPTED BALANCE DISPLAY */}
-                        <div className="bg-white/90 backdrop-blur rounded-2xl p-6 shadow-xl border border-rose-100 flex flex-col items-center">
+                        {/* BALANCE DISPLAY */}
+                        <div className="bg-white/90 backdrop-blur rounded-2xl p-6 shadow-xl border border-rose-100 flex flex-col items-center transform transition-transform hover:scale-105 duration-300">
                             <label className="text-xs font-bold uppercase tracking-widest text-rose-800/60 mb-2">Available Balance</label>
                             <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-rose-600 to-purple-600">
                                 {getEffectiveBalance().toFixed(4)}
@@ -234,7 +241,8 @@ export const Dashboard: React.FC = () => {
                             </div>
                         </div>
 
-                        {isSyncError() && (
+                        {/* Hidden Resync Button (Dev Mode only if needed, currently hidden) */}
+                        {/* {isSyncError() && (
                             <div className="flex justify-center -mt-4 mb-4">
                                 <button
                                     className="text-xs font-bold text-gray-400 hover:text-rose-500 transition-colors flex items-center gap-1"
@@ -243,54 +251,56 @@ export const Dashboard: React.FC = () => {
                                     <span>Re-sync Wallet State</span>
                                 </button>
                             </div>
-                        )}
+                        )} */}
 
                         <div className="grid gap-6">
-                            {/* Hide Raw Encrypted in smaller detail */}
+                            {/* Technical Details (Collapsed) */}
                             <details className="text-center group">
                                 <summary className="cursor-pointer text-xs font-bold uppercase tracking-widest text-rose-400 hover:text-rose-600 transition-colors list-none">
                                     Show Technical Details ▾
                                 </summary>
                                 <div className="mt-4 grid gap-4 animate-fadeIn">
                                     <div className="inner-card flex flex-col items-center justify-center p-4">
-                                        <label className="text-[10px] font-bold uppercase tracking-widest text-rose-900 mb-2">Encrypted State</label>
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-rose-900 mb-2">Encrypted Hash</label>
                                         <div className="font-mono text-[10px] bg-white/50 px-2 py-1 rounded text-rose-800 break-all w-full text-center">
                                             {Buffer.from(balanceAccount.encryptedBalance).toString('hex').slice(0, 32)}...
                                         </div>
-                                    </div>
-                                    <div className="inner-card flex flex-col items-center justify-center p-4">
-                                        <label className="text-[10px] font-bold uppercase tracking-widest text-rose-900 mb-2">Nonce</label>
-                                        <div className="text-xl font-bold text-rose-700">
-                                            {balanceAccount.nonce.toString()}
-                                        </div>
-                                    </div>
-                                    <div className="pt-2">
-                                        <button
-                                            className="text-xs text-rose-500 hover:text-rose-700 underline"
-                                            onClick={resetAccount}
-                                        >
-                                            [Debug] Reset / Fix Account State
-                                        </button>
                                     </div>
                                 </div>
                             </details>
                         </div>
 
-                        <div className="flex flex-col gap-3 mt-4">
-                            <button className="btn-primary w-full text-lg shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all" onClick={() => setIsTransferModalOpen(true)}>
-                                Send Private
+                        {/* ACTION BUTTONS */}
+                        <div className="grid grid-cols-2 gap-4 mt-6">
+                            {/* RECEIVE BUTTON (Left Slide) */}
+                            <button
+                                className="btn-secondary py-4 text-lg shadow-lg flex flex-col items-center justify-center gap-1 group"
+                                onClick={() => setIsReceiveOpen(true)}
+                            >
+                                <span className="text-2xl group-hover:-translate-y-1 transition-transform">📥</span>
+                                <span>Receive / Claim</span>
                             </button>
-                            <div className="flex gap-2">
-                                <button className="btn-secondary flex-1 text-lg shadow-md hover:shadow-lg transition-all" onClick={() => {
-                                    const maxBalance = decryptAmount(balanceAccount.encryptedBalance) / web3.LAMPORTS_PER_SOL;
-                                    handleWithdraw(maxBalance);
-                                }}>
-                                    Withdraw MAX
-                                </button>
-                                <button className="btn-secondary flex-1 text-lg shadow-md hover:shadow-lg transition-all" onClick={() => handleWithdraw()}>
-                                    Withdraw
-                                </button>
-                            </div>
+
+                            {/* SEND BUTTON (Right Slide) */}
+                            <button
+                                className="btn-primary py-4 text-lg shadow-lg flex flex-col items-center justify-center gap-1 group"
+                                onClick={() => setIsTransferModalOpen(true)}
+                            >
+                                <span className="text-2xl group-hover:-translate-y-1 transition-transform">📤</span>
+                                <span>Send Private</span>
+                            </button>
+                        </div>
+
+                        <div className="flex gap-2 mt-2">
+                            <button className="flex-1 py-3 bg-white border border-rose-200 text-rose-600 rounded-xl hover:bg-rose-50 font-bold text-sm transition-all" onClick={() => {
+                                const maxBalance = decryptAmount(balanceAccount.encryptedBalance) / web3.LAMPORTS_PER_SOL;
+                                handleWithdraw(maxBalance);
+                            }}>
+                                Withdraw MAX
+                            </button>
+                            <button className="flex-1 py-3 bg-white border border-rose-200 text-rose-600 rounded-xl hover:bg-rose-50 font-bold text-sm transition-all" onClick={() => handleWithdraw()}>
+                                Withdraw Amount
+                            </button>
                         </div>
                     </div>
                 )}
@@ -305,10 +315,13 @@ export const Dashboard: React.FC = () => {
                             balancePda={balancePda}
                             onSuccess={() => fetchBalance(balancePda)}
                         />
-                        <PendingTransfers />
+                        <PendingTransfers
+                            isOpen={isReceiveOpen}
+                            onClose={() => setIsReceiveOpen(false)}
+                        />
                     </>
                 )
             }
-        </div >
+        </div>
     );
 };
