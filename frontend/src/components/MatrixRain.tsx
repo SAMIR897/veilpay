@@ -27,7 +27,8 @@ const MatrixRain: React.FC = () => {
         const draw = () => {
             // Semi-transparent black fade to create trails
             // Pure black to ensure no red tint accumulates
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            // Increased alpha to 0.1 to clear trails faster and prevent "red smear" background
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             ctx.font = `${dropSize}px monospace`;
