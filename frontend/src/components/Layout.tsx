@@ -36,7 +36,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         <ConnectionProvider endpoint={endpoint}>
             <WalletProvider wallets={wallets} autoConnect>
                 <WalletModalProvider>
-                    <div className="min-h-screen flex flex-col items-center justify-center p-4 md:p-8 relative overflow-hidden bg-black">
+                    <div className="fixed inset-0 w-full h-full bg-black flex flex-col items-center justify-center p-4 md:p-8 overflow-hidden">
                         <MatrixRain />
                         <div className="w-full max-w-3xl space-y-12 relative z-10">
                             <header className="flex flex-col md:flex-row justify-between items-center w-full gap-6">
