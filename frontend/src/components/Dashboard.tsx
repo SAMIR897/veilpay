@@ -42,6 +42,42 @@ export const Dashboard: React.FC = () => {
         }
     };
 
+    const [vaultBalance, setVaultBalance] = useState<number | null>(null);
+
+    useEffect(() => {
+        if (connection) {
+            const [vaultPda] = PublicKey.findProgramAddressSync(
+                [Buffer.from("vault")],
+                PROGRAM_ID
+            );
+            connection.getBalance(vaultPda).then(lamports => {
+                setVaultBalance(lamports);
+            });
+            // Poll vault balance
+            const interval = setInterval(() => {
+                connection.getBalance(vaultPda).then(setVaultBalance);
+            }, 5000);
+            return () => clearInterval(interval);
+        }
+    }, [connection]);
+
+    // Helper to get effective balance
+    const getEffectiveBalance = () => {
+        if (!balanceAccount) return 0;
+        const decrypted = decryptAmount(balanceAccount.encryptedBalance);
+        if (vaultBalance === null) return decrypted / web3.LAMPORTS_PER_SOL;
+
+        // Cap at vault balance to show "Real" withdrawable
+        const effective = Math.min(decrypted, vaultBalance);
+        return effective / web3.LAMPORTS_PER_SOL;
+    };
+
+    const isSyncError = () => {
+        if (!balanceAccount || vaultBalance === null) return false;
+        const decrypted = decryptAmount(balanceAccount.encryptedBalance);
+        return decrypted > (vaultBalance + 10000); // Small buffer for dust
+    };
+
     const handleWithdraw = async (maxAmount?: number) => {
         if (!wallet.publicKey || !balancePda) return;
 
@@ -193,20 +229,27 @@ export const Dashboard: React.FC = () => {
                         <div className="bg-white/90 backdrop-blur rounded-2xl p-6 shadow-xl border border-rose-100 flex flex-col items-center">
                             <label className="text-xs font-bold uppercase tracking-widest text-rose-800/60 mb-2">Available Balance</label>
                             <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-rose-600 to-purple-600">
-                                {(decryptAmount(balanceAccount.encryptedBalance) / web3.LAMPORTS_PER_SOL).toFixed(4)}
+                                {getEffectiveBalance().toFixed(4)}
                                 <span className="text-lg ml-2 text-rose-400 font-bold">SOL</span>
                             </div>
+                            {isSyncError() && (
+                                <div className="text-xs text-rose-500 font-bold mt-2 bg-rose-50 px-2 py-1 rounded">
+                                    ⚠️ Corrected from {(decryptAmount(balanceAccount.encryptedBalance) / web3.LAMPORTS_PER_SOL).toFixed(4)} (Vault Cap)
+                                </div>
+                            )}
                         </div>
 
-                        <div className="flex justify-center -mt-4 mb-4">
-                            <button
-                                className="text-xs font-bold text-rose-500 bg-rose-50 px-3 py-1 rounded-full border border-rose-200 hover:bg-rose-100 transition-colors flex items-center gap-1"
-                                onClick={resetAccount}
-                            >
-                                <span>⚠️ Balance incorrect?</span>
-                                <span className="underline">Reset Account</span>
-                            </button>
-                        </div>
+                        {isSyncError() && (
+                            <div className="flex justify-center -mt-4 mb-4">
+                                <button
+                                    className="text-xs font-bold text-rose-500 bg-rose-50 px-3 py-1 rounded-full border border-rose-200 hover:bg-rose-100 transition-colors flex items-center gap-1"
+                                    onClick={resetAccount}
+                                >
+                                    <span>⚠️ Chain Sync Error.</span>
+                                    <span className="underline">Click to Fix</span>
+                                </button>
+                            </div>
+                        )}
 
                         <div className="grid gap-6">
                             {/* Hide Raw Encrypted in smaller detail */}
