@@ -27,12 +27,15 @@ body {
   padding: 0;
   font-family: 'Outfit', sans-serif;
   background-color: #000000;
-  /* Force Pitch Black */
+  /* Pitch Black Fallback */
+  background-image: url('./assets/bg-grid.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
-  /* Removed Wallpaper for clean Matrix Look */
-  background-image: none;
   overflow-x: hidden;
 }
 

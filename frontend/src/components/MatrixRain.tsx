@@ -25,11 +25,16 @@ const MatrixRain: React.FC = () => {
         const drops: number[] = new Array(columns).fill(0).map(() => Math.random() * -100); // Stagger start
 
         const draw = () => {
-            // Semi-transparent black fade to create trails
-            // Increased alpha to 0.15 to aggressively clear previous frames and ensure pitch black bg
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // "Destination-Out" Blending:
+            // Instead of drawing a black rectangle (which covers the background image),
+            // we use this mode to "erase" the previous frame's pixels, making them transparent.
+            // This reveals the CSS background-image behind the canvas.
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)'; // Control fade speed (higher = faster fade)
+            ctx.fillRect(0, 0, canvas.width, canvas.height); // Clears the canvas slowly
 
+            // Switch back to normal drawing for the new characters
+            ctx.globalCompositeOperation = 'source-over';
             ctx.font = `${dropSize}px monospace`;
 
             for (let i = 0; i < drops.length; i++) {
@@ -39,7 +44,7 @@ const MatrixRain: React.FC = () => {
 
                 const y = drops[i];
 
-                // 1. Repair the Trail (The spot ABOVE the head was White last frame, make it Red now)
+                // 1. Repair the Trail (The spot ABOVE the head)
                 if (y > 0) {
                     ctx.fillStyle = '#f43f5e'; // Rose-500
                     ctx.shadowBlur = 8;
@@ -73,7 +78,10 @@ const MatrixRain: React.FC = () => {
         <canvas
             ref={canvasRef}
             className="fixed inset-0 z-0 pointer-events-none"
-            style={{ filter: 'blur(0.5px)' }}
+            style={{
+                filter: 'blur(0.5px)',
+                // No background color here! We want transparency to see the CSS background.
+            }}
         />
     );
 };
