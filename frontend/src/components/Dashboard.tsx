@@ -64,13 +64,18 @@ export const Dashboard: React.FC = () => {
     }, [connection]);
 
     // Helper to get effective balance
+    // Helper to get effective balance
     const getEffectiveBalance = () => {
         if (!balanceAccount) return 0;
         const decrypted = decryptAmount(balanceAccount.encryptedBalance);
         if (vaultBalance === null) return decrypted / web3.LAMPORTS_PER_SOL;
 
-        // Cap at vault balance to show "Real" withdrawable
-        const effective = Math.min(decrypted, vaultBalance);
+        // Reserve 0.003 SOL for Vault Rent/Safety (non-withdrawable)
+        const VAULT_RESERVE = 3000000;
+        const withdrawableVault = Math.max(0, vaultBalance - VAULT_RESERVE);
+
+        // Cap at vault withdrawable balance
+        const effective = Math.min(decrypted, withdrawableVault);
         return effective / web3.LAMPORTS_PER_SOL;
     };
 
