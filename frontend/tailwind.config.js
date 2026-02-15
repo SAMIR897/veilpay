@@ -13,7 +13,7 @@ export default {
         accent: 'var(--accent-primary)',
       },
       fontFamily: {
-        sans: ['Outfit', sans - serif],
+        sans: ['Outfit', 'sans-serif'],
       },
       keyframes: {
         slideInRight: {
