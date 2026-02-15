@@ -232,21 +232,15 @@ export const Dashboard: React.FC = () => {
                                 {getEffectiveBalance().toFixed(4)}
                                 <span className="text-lg ml-2 text-rose-400 font-bold">SOL</span>
                             </div>
-                            {isSyncError() && (
-                                <div className="text-xs text-rose-500 font-bold mt-2 bg-rose-50 px-2 py-1 rounded">
-                                    ⚠️ Corrected from {(decryptAmount(balanceAccount.encryptedBalance) / web3.LAMPORTS_PER_SOL).toFixed(4)} (Vault Cap)
-                                </div>
-                            )}
                         </div>
 
                         {isSyncError() && (
                             <div className="flex justify-center -mt-4 mb-4">
                                 <button
-                                    className="text-xs font-bold text-rose-500 bg-rose-50 px-3 py-1 rounded-full border border-rose-200 hover:bg-rose-100 transition-colors flex items-center gap-1"
+                                    className="text-xs font-bold text-gray-400 hover:text-rose-500 transition-colors flex items-center gap-1"
                                     onClick={resetAccount}
                                 >
-                                    <span>⚠️ Chain Sync Error.</span>
-                                    <span className="underline">Click to Fix</span>
+                                    <span>Re-sync Wallet State</span>
                                 </button>
                             </div>
                         )}
@@ -315,6 +309,6 @@ export const Dashboard: React.FC = () => {
                     </>
                 )
             }
-        </div>
+        </div >
     );
 };
