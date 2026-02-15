@@ -20,20 +20,20 @@ const MatrixRain: React.FC = () => {
 
         // Matrix characters (Katakana + Latin)
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*()ｦｧｨｩｪｫｬｭｮｯｰｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ';
-        const dropSize = 14;
+        const dropSize = 24;
         const columns = Math.ceil(canvas.width / dropSize);
         const drops: number[] = new Array(columns).fill(0).map(() => Math.random() * -100); // Stagger start
 
         const draw = () => {
             // "Destination-Out" Blending:
-            // Slower fade for longer trails (Skynet Mode)
+            // Very slow fade (0.03) for Extremely Long Trails
             ctx.globalCompositeOperation = 'destination-out';
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)'; // Lower alpha = Longer trails
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.03)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             // Switch back to normal drawing for the new characters
             ctx.globalCompositeOperation = 'source-over';
-            ctx.font = `${dropSize}px monospace`;
+            ctx.font = `bold ${dropSize}px monospace`; // Bold for visibility
 
             for (let i = 0; i < drops.length; i++) {
                 // Get characters
@@ -43,30 +43,30 @@ const MatrixRain: React.FC = () => {
                 const y = drops[i];
 
                 // 1. Repair the Trail (The spot ABOVE the head)
-                // Skynet Red: Deep, menacing red
                 if (y > 0) {
-                    ctx.fillStyle = '#ff0000'; // Pure Red
-                    ctx.shadowBlur = 8;
-                    ctx.shadowColor = '#800000'; // Deep Blood Red Glow
+                    ctx.fillStyle = '#990000'; // Blood Red (Darker)
+                    ctx.shadowBlur = 5;
+                    ctx.shadowColor = '#4a0000'; // Dark Glow
                     ctx.fillText(prevText, i * dropSize, (y - 1) * dropSize);
                 }
 
-                // 2. Draw the Head (New sparkling Leading Edge)
-                ctx.fillStyle = '#ffffff';
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = '#ff0000'; // Red tinged white glow
+                // 2. Draw the Head (Leading Edge)
+                // Removed White entirely. Used Bright Neon Red for Skynet look.
+                ctx.fillStyle = '#ff1a1a'; // Neon Red
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#ff0000'; // Bright Red Glow
                 ctx.fillText(text, i * dropSize, y * dropSize);
 
                 // Reset drop or move it down
-                if (y * dropSize > canvas.height && Math.random() > 0.975) {
+                if (y * dropSize > canvas.height && Math.random() > 0.985) { // 0.985 = fewer drops respawning at once
                     drops[i] = 0;
                 }
                 drops[i]++;
             }
         };
 
-        // Slower speed for more ominous feel (50ms = 20fps)
-        const interval = setInterval(draw, 50);
+        // Aggressively Slow Speed (75ms = ~13fps)
+        const interval = setInterval(draw, 75);
 
         return () => {
             clearInterval(interval);
@@ -80,7 +80,6 @@ const MatrixRain: React.FC = () => {
             className="fixed inset-0 z-0 pointer-events-none"
             style={{
                 filter: 'blur(0.5px)',
-                // No background color here! We want transparency to see the CSS background.
             }}
         />
     );
