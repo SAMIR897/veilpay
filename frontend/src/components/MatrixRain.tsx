@@ -26,7 +26,7 @@ const MatrixRain: React.FC = () => {
         const drops: number[] = new Array(columns).fill(0).map(() => Math.random() * -100);
 
         let lastTime = 0;
-        const fps = 20;
+        const fps = 14;
         const interval = 1000 / fps;
         let animationFrameId: number;
 
