@@ -10,7 +10,7 @@ const MatrixRain: React.FC = () => {
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        console.log("MatrixRain Skynet V2 Active - DropSize: 15, Speed: 75ms");
+        console.log("MatrixRain V3 Active - DropSize: 18, Speed: 50ms, Hazy Trails");
 
         // Set canvas size
         const resizeCanvas = () => {
@@ -22,18 +22,18 @@ const MatrixRain: React.FC = () => {
 
         // Matrix characters (Katakana + Latin)
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*()ｦｧｨｩｪｫｬｭｮｯｰｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ';
-        const dropSize = 15; // 40% reduction from 24px
+        const dropSize = 18; // Increased from 15px per "look weird" feedback
         const columns = Math.ceil(canvas.width / dropSize);
         const drops: number[] = new Array(columns).fill(0).map(() => Math.random() * -100); // Stagger start
 
         const draw = () => {
             // "Destination-Out" Blending:
-            // Slower fade for maintained trail length
+            // Slower fade for maintained background trail length
             ctx.globalCompositeOperation = 'destination-out';
             ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Switch back to normal drawing for the new characters
+            // Switch back to normal drawing
             ctx.globalCompositeOperation = 'source-over';
             ctx.font = `bold ${dropSize}px monospace`; // Bold for visibility
 
@@ -43,47 +43,49 @@ const MatrixRain: React.FC = () => {
 
                 const y = drops[i];
 
-                // TRAIL LOGIC: 5-step gradient from Tail (Dim) to Head (Bright)
-                // We draw the trail characters explicitly to control the specific "increasing glow" effect requested.
+                // TRAIL LOGIC: 12-step gradient (40% bigger trail)
+                // "Hazy" effect: Apply blur to the trail characters
 
-                // 1. The Head (Brightest)
-                ctx.fillStyle = '#ff1a1a'; // Neon Red
+                // 1. The Head (Brightest & Sharpest)
+                ctx.filter = 'none'; // Sharp head
+                ctx.fillStyle = '#ff3333'; // Neon Red (Brighter)
                 ctx.shadowBlur = 15;
                 ctx.shadowColor = '#ff0000'; // Max Glow
                 ctx.fillText(text, i * dropSize, y * dropSize);
 
-                // 2. The Trail (Previous 4 positions)
-                for (let k = 1; k <= 4; k++) {
+                // 2. The Trail (Previous 12 positions)
+                // "Words go hazy": We apply blur to the trail
+                ctx.filter = 'blur(1px)'; // Hazy effect
+
+                for (let k = 1; k <= 12; k++) {
                     const trailY = y - k;
                     if (trailY > 0) {
                         const trailChar = chars[Math.floor(Math.random() * chars.length)];
 
                         // Gradient Logic:
-                        // k=1 (Immediate behind head): Bright
-                        // k=4 (Furthest behind): Dim
-
-                        if (k === 1) {
+                        if (k <= 3) {
+                            // Close to head: Bright but Hazy
                             ctx.fillStyle = '#cc0000';
-                            ctx.shadowBlur = 10;
+                            ctx.shadowBlur = 8;
                             ctx.shadowColor = '#cc0000';
-                        } else if (k === 2) {
+                        } else if (k <= 7) {
+                            // Mid trail: Medium Hazy
                             ctx.fillStyle = '#990000';
-                            ctx.shadowBlur = 6;
+                            ctx.shadowBlur = 4;
                             ctx.shadowColor = '#800000';
-                        } else if (k === 3) {
-                            ctx.fillStyle = '#660000';
-                            ctx.shadowBlur = 3;
-                            ctx.shadowColor = '#400000';
                         } else {
-                            // k=4 (Tail Tip)
-                            ctx.fillStyle = '#330000';
-                            ctx.shadowBlur = 0; // No glow
+                            // Tail Tip: Dim & Very Hazy
+                            ctx.fillStyle = '#4d0000';
+                            ctx.shadowBlur = 0;
                             ctx.shadowColor = 'transparent';
                         }
 
                         ctx.fillText(trailChar, i * dropSize, trailY * dropSize);
                     }
                 }
+
+                // Reset filter for next loop iteration safety? 
+                // Context state persists, so we reset 'none' at start of loop for head.
 
                 // Reset drop or move it down
                 if (y * dropSize > canvas.height && Math.random() > 0.985) {
@@ -93,8 +95,8 @@ const MatrixRain: React.FC = () => {
             }
         };
 
-        // Speed: 75ms (Keep the slow mechanical feel)
-        const interval = setInterval(draw, 75);
+        // Speed: 50ms (~20fps) - Slightly faster than 13fps to smooth out the haziness
+        const interval = setInterval(draw, 50);
 
         return () => {
             clearInterval(interval);
@@ -107,7 +109,8 @@ const MatrixRain: React.FC = () => {
             ref={canvasRef}
             className="fixed inset-0 z-0 pointer-events-none"
             style={{
-                filter: 'blur(0.5px)',
+                // Removed global CSS blur to allow sharp head characters
+                // filter: 'blur(0.5px)', 
             }}
         />
     );
