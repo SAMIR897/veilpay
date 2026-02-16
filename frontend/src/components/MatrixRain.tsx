@@ -7,12 +7,11 @@ const MatrixRain: React.FC = () => {
         const canvas = canvasRef.current;
         if (!canvas) return;
 
-        const ctx = canvas.getContext('2d', { alpha: true }); // Standard context
+        const ctx = canvas.getContext('2d', { alpha: true });
         if (!ctx) return;
 
-        console.log("MatrixRain V4 Optimized - 18px, CSS Blur, 20fps RAF");
+        console.log("MatrixRain V5 Clean - 18px, Fast Fade, Explicit Optimized Trail");
 
-        // Set canvas size
         const resizeCanvas = () => {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
@@ -20,13 +19,11 @@ const MatrixRain: React.FC = () => {
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
 
-        // Matrix characters (Katakana + Latin)
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789%&ｦｧｨｩｪｫｬｭｮｯｰｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ';
         const dropSize = 18;
         const columns = Math.ceil(canvas.width / dropSize);
         const drops: number[] = new Array(columns).fill(0).map(() => Math.random() * -100);
 
-        // Frame rate control
         let lastTime = 0;
         const fps = 20;
         const interval = 1000 / fps;
@@ -41,11 +38,10 @@ const MatrixRain: React.FC = () => {
             lastTime = currentTime - (deltaTime % interval);
 
             // "Destination-Out" Blending:
-            // Very slow fade (0.02) = EXTREMELY LONG TRAILS without CPU cost
-            // This replaces the explicit "12-char loop" which was killing CPU (100+ columns * 12 chars * Blur = Death)
-            // By just fading slower, the previous frames persist longer, creating the same visual "long trail" effect for free.
+            // High Alpha (0.1) = CLEAN BACKGROUND.
+            // This aggressively wipes the previous frame, removing the "messy blur line" the user hated.
             ctx.globalCompositeOperation = 'destination-out';
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.02)';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             // Switch back to normal drawing
@@ -56,16 +52,41 @@ const MatrixRain: React.FC = () => {
                 const text = chars[Math.floor(Math.random() * chars.length)];
                 const y = drops[i];
 
-                // Simple 1-pass drawing (Head only)
-                // The trail is created by the persistence of previous frames!
+                // OPTIMIZED EXPLICIT LOOP
+                // We draw the trail explicitly since we are erasing the background fast.
+                // We optimize by turning off Glow for the tail to save GPU/CPU.
 
-                // Head (Neon Red)
+                // 1. The Head (Bright + Glow)
                 ctx.fillStyle = '#ff3333';
-                ctx.shadowBlur = 8; // Reduced blur radius for performance
+                ctx.shadowBlur = 10;
                 ctx.shadowColor = '#ff0000';
                 ctx.fillText(text, i * dropSize, y * dropSize);
 
-                // No Explicit Trail Loop needed -> O(N) instead of O(N*12)
+                // 2. The Trail (15 Chars)
+                for (let k = 1; k <= 15; k++) {
+                    const trailY = y - k;
+                    if (trailY > 0) {
+                        const trailChar = chars[Math.floor(Math.random() * chars.length)];
+
+                        // Performance Optimization:
+                        // Only glow the first 3 chars. 
+                        // The rest (4-15) are just flat colored text (Very cheap to render).
+
+                        if (k <= 3) {
+                            ctx.fillStyle = '#cc0000';
+                            ctx.shadowBlur = 5;
+                            ctx.shadowColor = '#800000';
+                        } else {
+                            ctx.shadowBlur = 0; // Disable heavy glow
+                            // Gradient Fade logic for tail
+                            if (k <= 8) ctx.fillStyle = '#990000';
+                            else if (k <= 12) ctx.fillStyle = '#660000';
+                            else ctx.fillStyle = '#330000';
+                        }
+
+                        ctx.fillText(trailChar, i * dropSize, trailY * dropSize);
+                    }
+                }
 
                 if (y * dropSize > canvas.height && Math.random() > 0.985) {
                     drops[i] = 0;
@@ -74,7 +95,6 @@ const MatrixRain: React.FC = () => {
             }
         };
 
-        // Start Loop
         animationFrameId = requestAnimationFrame(draw);
 
         return () => {
@@ -88,10 +108,9 @@ const MatrixRain: React.FC = () => {
             ref={canvasRef}
             className="fixed inset-0 z-0 pointer-events-none"
             style={{
-                // FILTER MOVED TO CSS (GPU Accelerated)
-                // This gives the "Words go hazy" effect without blocking the JS thread
+                // Keep the "Hazy" look via GPU
                 filter: 'blur(1.5px)',
-                opacity: 0.8, // Slight transparency to blend
+                opacity: 0.8,
             }}
         />
     );
