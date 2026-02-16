@@ -222,7 +222,7 @@ export const Dashboard: React.FC = () => {
     return (
         <div className="space-y-8 text-center w-full relative">
             <div className="glass-panel p-8 md:p-10 shadow-2xl relative z-10">
-                <h2 className="text-3xl font-bold mb-8 text-rose-900 tracking-tight">Your Private Balance</h2>
+                <h2 className="text-3xl font-bold mb-8 text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.8)] tracking-tight">Your Private Balance</h2>
 
                 {loading && <p className="font-medium text-lg animate-pulse text-rose-500">Processing secure transaction...</p>}
 
