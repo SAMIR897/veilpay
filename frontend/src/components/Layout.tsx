@@ -46,7 +46,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                                     </h1>
                                 </div>
                                 <div className="transform hover:scale-105 transition-transform">
-                                    <WalletMultiButton />
+                                    <div className="relative z-50">
+                                        <WalletMultiButton />
+                                    </div>
                                 </div>
                             </header>
                             <main className="w-full">
