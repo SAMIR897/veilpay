@@ -45,10 +45,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                                         VeilPay
                                     </h1>
                                 </div>
-                                <div className="transform hover:scale-105 transition-transform">
-                                    <div className="relative z-50">
-                                        <WalletMultiButton />
-                                    </div>
+                                <div className="transform hover:scale-105 transition-transform relative z-50">
+                                    <WalletMultiButton />
                                 </div>
                             </header>
                             <main className="w-full">
