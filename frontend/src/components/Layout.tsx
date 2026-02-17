@@ -39,7 +39,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <div className="fixed inset-0 w-full h-full bg-black flex flex-col items-center justify-center p-4 md:p-8 overflow-hidden">
                         <MatrixRain />
                         <div className="w-full max-w-3xl space-y-12 relative z-10">
-                            <header className="flex flex-col md:flex-row justify-between items-center w-full gap-6">
+                            <header className="flex flex-col md:flex-row justify-between items-center w-full gap-6 relative z-50">
                                 <div className="flex items-center gap-3">
                                     <h1 className="text-4xl font-bold tracking-tight text-[#e11d48] drop-shadow-sm">
                                         VeilPay
@@ -49,7 +49,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                                     <WalletMultiButton />
                                 </div>
                             </header>
-                            <main className="w-full">
+                            <main className="w-full relative z-0">
                                 {children}
                             </main>
                         </div>

@@ -56,6 +56,11 @@ body {
     @apply bg-white/20 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl;
   }
 
+  /* Force Wallet Adapter Dropdown to be on top */
+  .wallet-adapter-dropdown-list {
+    z-index: 9999 !important;
+  }
+
   .inner-card {
     @apply bg-white/50 backdrop-blur-sm p-4 rounded-xl border border-rose-100/50 shadow-sm;
   }
